@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RainFish Studio</title>
+    <link rel="shortcut  icon" type="image/x-icon" href="MiniTopicLogo.ico" media="screen" />
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #1a1a1a;
+        }
+        svg {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <svg id="rain"></svg>
+
+    <script>
+        const svg = document.getElementById('rain');
+        let isVisible = true;
+        let rainInterval = null;
+        let activeRaindrops = [];
+        let fixedRainCount = 100; // 初始雨滴数量
+
+        function resizeSVG() {
+            svg.setAttribute('width', window.innerWidth);
+            svg.setAttribute('height', window.innerHeight);
+            drawFish();
+            adjustRainDensity();
+            if (!rainInterval) startRain();
+        }
+
+        function adjustRainDensity() {
+            //const scale = Math.min(window.innerWidth / 800, window.innerHeight / 800);
+            const scale = Math.max(window.innerWidth / 800, window.innerHeight / 800);
+            fixedRainCount = Math.max(84, Math.floor(140 * scale)); // 让雨滴数量随缩放比例调整，最少50个
+            startRain();
+        }
+
+        function drawFish() {
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+            //const fishSize = Math.min(window.innerWidth, window.innerHeight) / 6;
+            //const scale = Math.min(window.innerWidth / 800, window.innerHeight / 800);
+            const scale = Math.max(window.innerWidth / 800, window.innerHeight / 800);
+            const fishSize = (Math.min(window.innerWidth, window.innerHeight) / 4) / scale;
+
+            const oldFish = document.getElementById('fish');
+            if (oldFish) svg.removeChild(oldFish);
+
+            const fishGroup = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+            fishGroup.setAttribute('id', 'fish');
+
+            // Fish body outline
+            const body = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            body.setAttribute('d', `
+                M ${centerX - fishSize} ${centerY} 
+                Q ${centerX} ${centerY - fishSize / 1.5}, ${centerX + fishSize} ${centerY} 
+                Q ${centerX} ${centerY + fishSize / 1.5}, ${centerX - fishSize} ${centerY} Z
+            `);
+            body.setAttribute('fill', 'none');
+            body.setAttribute('stroke', 'white');
+            body.setAttribute('stroke-width', '4');
+
+            // Fish tail (triangle)
+            const tail = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            tail.setAttribute('points', `
+                ${centerX + fishSize},${centerY} 
+                ${centerX + fishSize * 1.5},${centerY - fishSize / 3} 
+                ${centerX + fishSize * 1.5},${centerY + fishSize / 3}
+            `);
+            tail.setAttribute('fill', 'none');
+            tail.setAttribute('stroke', 'white');
+            tail.setAttribute('stroke-width', '2');
+            
+            // Fish gill (curve)
+            const gill = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            gill.setAttribute('d', `
+                M ${centerX - fishSize / 3} ${centerY - fishSize / 4} 
+                Q ${centerX - fishSize / 1.8} ${centerY}, ${centerX - fishSize / 3} ${centerY + fishSize / 4}
+            `);
+            gill.setAttribute('stroke', 'white');
+            gill.setAttribute('stroke-width', '2');
+            gill.setAttribute('fill', 'none');
+
+            fishGroup.appendChild(body);
+            fishGroup.appendChild(tail);
+            fishGroup.appendChild(gill);
+            svg.appendChild(fishGroup);
+        }
+
+        function createRaindrop() {
+            if (activeRaindrops.length >= fixedRainCount) return;
+            const x = Math.random() * window.innerWidth;
+            const y = -10;
+            //const length = 44;
+            const scale = Math.min(window.innerWidth / 800, window.innerHeight / 800);
+            const length = 44 * scale;
+            const opacity = Math.random() * 0.5 + 0.2;
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('x1', x);
+            line.setAttribute('y1', y);
+            line.setAttribute('x2', x);
+            line.setAttribute('y2', y + length);
+            line.setAttribute('stroke', '#00a8ff');
+            line.setAttribute('stroke-width', '1');
+            line.setAttribute('opacity', opacity);
+            svg.appendChild(line);
+            activeRaindrops.push(line);
+            animateRaindrop(line);
+        }
+
+        function animateRaindrop(line) {
+            let y1 = parseFloat(line.getAttribute('y1'));
+            let y2 = parseFloat(line.getAttribute('y2'));
+            const speed = 2 + Math.random() * 3;
+            function animate() {
+                if (!isVisible) return;
+                y1 += speed;
+                y2 += speed;
+                line.setAttribute('y1', y1);
+                line.setAttribute('y2', y2);
+                if (y1 > window.innerHeight) {
+                    svg.removeChild(line);
+                    activeRaindrops = activeRaindrops.filter(r => r !== line);
+                    createRaindrop();
+                } else {
+                    requestAnimationFrame(animate);
+                }
+            }
+            animate();
+        }
+
+        function startRain() {
+            if (rainInterval) clearInterval(rainInterval);
+            rainInterval = setInterval(() => {
+                if (activeRaindrops.length < fixedRainCount) {
+                    createRaindrop();
+                }
+            }, 100);
+        }
+
+        function pauseRain() {
+            clearInterval(rainInterval);
+            rainInterval = null;
+        }
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                isVisible = false;
+                pauseRain();
+            } else {
+                isVisible = true;
+                adjustRainDensity();
+            }
+        });
+
+        window.addEventListener('resize', resizeSVG);
+
+        resizeSVG();
+        drawFish();
+        adjustRainDensity();
+    </script>
+</body>
+</html>
